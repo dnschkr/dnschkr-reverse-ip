@@ -33,7 +33,19 @@ export async function findOwnedPurchase(args: {
   const supabase = getClient(args.supabaseUrl, args.supabaseServiceRoleKey);
   const nowIso = new Date().toISOString();
 
-  const { data, error } = await supabase
+  // Supabase's typed query builder narrows to `never` without a generated
+  // schema; cast the row shape we need here.
+  type Row = {
+    id: string;
+    created_at: string;
+    access_expires_at: string;
+    url_expires_at: string | null;
+    download_csv_url: string | null;
+    download_jsonl_url: string | null;
+    download_manifest_url: string | null;
+  };
+
+  const { data, error } = (await supabase
     .from('download_purchases')
     .select(
       'id, created_at, access_expires_at, url_expires_at, download_csv_url, download_jsonl_url, download_manifest_url',
@@ -45,7 +57,7 @@ export async function findOwnedPurchase(args: {
     .filter('product_metadata->>ip', 'eq', args.ip)
     .order('created_at', { ascending: false })
     .limit(1)
-    .maybeSingle();
+    .maybeSingle()) as { data: Row | null; error: unknown };
 
   if (error) {
     console.error('[owned-product] supabase error', error);
