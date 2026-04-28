@@ -4,6 +4,7 @@ import { Hono } from 'hono';
 import { logger } from 'hono/logger';
 import { healthRoute } from './routes/health.js';
 import { createLookupRoute } from './routes/lookup.js';
+import { createGenerateExportRoute } from './routes/jobs/generate-export.js';
 import { bearerAuth } from './lib/auth.js';
 import { rateLimitPerIp } from './lib/rate-limit.js';
 import { loadConfig } from './config.js';
@@ -16,6 +17,8 @@ export function createApp() {
   app.use('/lookup', bearerAuth(config.apiKey));
   app.use('/lookup', rateLimitPerIp({ requestsPerMinute: 100 }));
   app.route('/', createLookupRoute(config));
+  app.use('/jobs/*', bearerAuth(config.apiKey));
+  app.route('/', createGenerateExportRoute(config));
   return app;
 }
 
