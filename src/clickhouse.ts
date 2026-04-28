@@ -20,10 +20,12 @@ export interface ReverseIpClient {
   listHostnamesForIp(ip: string, limit: number): Promise<HostnameRow[]>;
 }
 
+// echo-1's ip_to_hostname.ip column is String (not IPv4); bind the param as
+// String to avoid a "no supertype for types String, IPv4" comparison error.
 const COUNT_SQL = `
   SELECT count(*) AS total
   FROM ip_to_hostname
-  WHERE ip = {ip:IPv4}
+  WHERE ip = {ip:String}
     AND last_seen >= now() - INTERVAL 7 DAY
 `;
 
@@ -37,7 +39,7 @@ const LIST_SQL = `
     h.tld AS tld
   FROM ip_to_hostname itoh
   LEFT JOIN hostnames h ON h.hostname = itoh.hostname
-  WHERE itoh.ip = {ip:IPv4}
+  WHERE itoh.ip = {ip:String}
     AND itoh.last_seen >= now() - INTERVAL 7 DAY
   ORDER BY itoh.last_seen DESC
   LIMIT {limit:UInt32}
