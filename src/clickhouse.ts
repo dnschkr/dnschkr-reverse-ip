@@ -29,18 +29,23 @@ const COUNT_SQL = `
     AND last_seen >= now() - INTERVAL 7 DAY
 `;
 
+// `hostnames` has multiple rows per hostname (one per discovered_via value),
+// so a naive LEFT JOIN multiplies result rows. Aggregate via any() inside a
+// GROUP BY to collapse the join back to one row per (hostname, record_type).
+// This keeps the file row count consistent with COUNT_SQL.
 const LIST_SQL = `
   SELECT
     itoh.hostname AS hostname,
     itoh.record_type AS record_type,
     formatDateTime(itoh.first_seen, '%Y-%m-%dT%H:%i:%SZ') AS first_seen,
     formatDateTime(itoh.last_seen, '%Y-%m-%dT%H:%i:%SZ') AS last_seen,
-    h.is_apex AS is_apex,
-    h.tld AS tld
+    any(h.is_apex) AS is_apex,
+    any(h.tld) AS tld
   FROM ip_to_hostname itoh
   LEFT JOIN hostnames h ON h.hostname = itoh.hostname
   WHERE itoh.ip = {ip:String}
     AND itoh.last_seen >= now() - INTERVAL 7 DAY
+  GROUP BY itoh.hostname, itoh.record_type, itoh.first_seen, itoh.last_seen
   ORDER BY itoh.last_seen DESC
   LIMIT {limit:UInt32}
 `;
