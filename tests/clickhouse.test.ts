@@ -31,15 +31,15 @@ describe('countHostnamesForIp', () => {
 });
 
 describe('listHostnamesForIp', () => {
-  it('runs the join query with limit parameter', async () => {
+  it('runs the list query with limit parameter and maps *_iso aliases', async () => {
     mockQuery.mockResolvedValueOnce({
       json: async () => ({
         data: [
           {
             hostname: 'example.com',
             record_type: 'A',
-            first_seen: '2024-01-01 00:00:00',
-            last_seen: '2026-04-26 00:00:00',
+            first_seen_iso: '2024-01-01T00:00:00Z',
+            last_seen_iso: '2026-04-26T00:00:00Z',
             is_apex: 1,
             tld: 'com',
           },
@@ -55,6 +55,8 @@ describe('listHostnamesForIp', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]!.hostname).toBe('example.com');
     expect(rows[0]!.is_apex).toBe(true);
+    expect(rows[0]!.first_seen).toBe('2024-01-01T00:00:00Z');
+    expect(rows[0]!.last_seen).toBe('2026-04-26T00:00:00Z');
     const arg = mockQuery.mock.calls[0]![0];
     expect(arg.query_params).toEqual({ ip: '1.2.3.4', limit: 1000 });
   });

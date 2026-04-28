@@ -41,12 +41,19 @@ const COUNT_SQL = `
 // actually MORE accurate than the previous JOIN against `hostnames.is_apex`.
 // Total query time drops from ~4.5s → ~340ms (~13× faster) and stays flat
 // across IP volumes (verified for 1, 168, 6,001, and 11,508-row IPs).
+//
+// IMPORTANT: SELECT aliases use *_iso names rather than reusing the column
+// names (`first_seen`, `last_seen`). ClickHouse's optimizer pushes SELECT
+// alias expressions into WHERE/ORDER BY, so aliasing
+// `formatDateTime(last_seen, ...) AS last_seen` causes the WHERE clause to
+// compare a String against `now() - INTERVAL 7 DAY` (DateTime), which raises
+// NO_COMMON_TYPE.
 const LIST_SQL = `
   SELECT
     hostname,
     record_type,
-    formatDateTime(first_seen, '%Y-%m-%dT%H:%i:%SZ') AS first_seen,
-    formatDateTime(last_seen, '%Y-%m-%dT%H:%i:%SZ') AS last_seen,
+    formatDateTime(first_seen, '%Y-%m-%dT%H:%i:%SZ') AS first_seen_iso,
+    formatDateTime(last_seen, '%Y-%m-%dT%H:%i:%SZ') AS last_seen_iso,
     hostname = cutToFirstSignificantSubdomain(hostname) AS is_apex,
     splitByChar('.', cutToFirstSignificantSubdomain(hostname))[-1] AS tld
   FROM ip_to_hostname
@@ -88,8 +95,8 @@ export function createReverseIpClient(
         data: Array<{
           hostname: string;
           record_type: string;
-          first_seen: string;
-          last_seen: string;
+          first_seen_iso: string;
+          last_seen_iso: string;
           is_apex: number | string;
           tld: string;
         }>;
@@ -97,8 +104,8 @@ export function createReverseIpClient(
       return data.data.map((row) => ({
         hostname: row.hostname,
         record_type: row.record_type as 'A' | 'AAAA',
-        first_seen: row.first_seen,
-        last_seen: row.last_seen,
+        first_seen: row.first_seen_iso,
+        last_seen: row.last_seen_iso,
         is_apex: row.is_apex === 1 || row.is_apex === '1',
         tld: row.tld,
       }));
