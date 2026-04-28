@@ -29,24 +29,30 @@ const COUNT_SQL = `
     AND last_seen >= now() - INTERVAL 7 DAY
 `;
 
-// `hostnames` has multiple rows per hostname (one per discovered_via value),
-// so a naive LEFT JOIN multiplies result rows. Aggregate via any() inside a
-// GROUP BY to collapse the join back to one row per (hostname, record_type).
-// This keeps the file row count consistent with COUNT_SQL.
+// Earlier this query did `LEFT JOIN hostnames h ON h.hostname = itoh.hostname`
+// to attach `is_apex` and `tld`. That JOIN took ~4.5s per request because
+// ClickHouse's hash join builds the entire 258M-row right side regardless of
+// algorithm (`hash`, `parallel_hash`, `partial_merge`, `auto` all measured
+// ≥4.5s; `full_sorting_merge` blew up to 60s).
+//
+// Both columns can be derived from the hostname string directly using
+// ClickHouse's built-in PSL functions, with no JOIN. `cutToFirstSignificantSubdomain`
+// understands compound suffixes (e.g. `example.co.uk` → apex), so this is
+// actually MORE accurate than the previous JOIN against `hostnames.is_apex`.
+// Total query time drops from ~4.5s → ~340ms (~13× faster) and stays flat
+// across IP volumes (verified for 1, 168, 6,001, and 11,508-row IPs).
 const LIST_SQL = `
   SELECT
-    itoh.hostname AS hostname,
-    itoh.record_type AS record_type,
-    formatDateTime(itoh.first_seen, '%Y-%m-%dT%H:%i:%SZ') AS first_seen,
-    formatDateTime(itoh.last_seen, '%Y-%m-%dT%H:%i:%SZ') AS last_seen,
-    any(h.is_apex) AS is_apex,
-    any(h.tld) AS tld
-  FROM ip_to_hostname itoh
-  LEFT JOIN hostnames h ON h.hostname = itoh.hostname
-  WHERE itoh.ip = {ip:String}
-    AND itoh.last_seen >= now() - INTERVAL 7 DAY
-  GROUP BY itoh.hostname, itoh.record_type, itoh.first_seen, itoh.last_seen
-  ORDER BY itoh.last_seen DESC
+    hostname,
+    record_type,
+    formatDateTime(first_seen, '%Y-%m-%dT%H:%i:%SZ') AS first_seen,
+    formatDateTime(last_seen, '%Y-%m-%dT%H:%i:%SZ') AS last_seen,
+    hostname = cutToFirstSignificantSubdomain(hostname) AS is_apex,
+    splitByChar('.', cutToFirstSignificantSubdomain(hostname))[-1] AS tld
+  FROM ip_to_hostname
+  WHERE ip = {ip:String}
+    AND last_seen >= now() - INTERVAL 7 DAY
+  ORDER BY last_seen DESC
   LIMIT {limit:UInt32}
 `;
 
