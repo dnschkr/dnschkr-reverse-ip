@@ -1,6 +1,22 @@
 // src/index.ts
-// Placeholder — Task 5 will implement the Hono app + health endpoint.
-// Task 13 will add the /lookup route.
-// Task 24 will add the /jobs/generate-export route.
+import { serve } from '@hono/node-server';
+import { Hono } from 'hono';
+import { logger } from 'hono/logger';
+import { healthRoute } from './routes/health';
+import { loadConfig } from './config';
 
-console.log('dnschkr-reverse-ip — placeholder; run pnpm install + see Task 5');
+export function createApp() {
+  const app = new Hono();
+  app.use('*', logger());
+  app.route('/', healthRoute);
+  return app;
+}
+
+// Only start the server when this file is the entrypoint (not when imported by tests)
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const config = loadConfig();
+  const app = createApp();
+  serve({ fetch: app.fetch, port: config.port }, ({ port }) => {
+    console.log(`reverse-ip listening on :${port}`);
+  });
+}
