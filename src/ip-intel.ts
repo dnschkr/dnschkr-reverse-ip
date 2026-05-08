@@ -21,12 +21,17 @@ export async function fetchIpIntel(args: {
       signal: controller.signal,
     });
     if (!resp.ok) return null;
+    // dnschkr-ip's v2 response shape: classification.is_cdn lives inside the
+    // `classification` object, alongside is_hosting / is_vpn / is_tor / etc.
+    // The flat top-level `is_cdn` was never returned and reading it always
+    // produced undefined, so the CDN warning banner never rendered for
+    // Cloudflare-fronted IPs (e.g. 172.66.145.120).
     const data = (await resp.json()) as {
       asn?: string;
       asn_org?: string;
       country?: string;
       city?: string;
-      is_cdn?: boolean;
+      classification?: { is_cdn?: boolean };
       threats?: string[];
     };
     return {
@@ -34,7 +39,7 @@ export async function fetchIpIntel(args: {
       country: data.country ?? '',
       city: data.city ?? '',
       org: data.asn_org ?? '',
-      is_cdn: Boolean(data.is_cdn),
+      is_cdn: Boolean(data.classification?.is_cdn),
       threats: data.threats ?? [],
     };
   } catch {

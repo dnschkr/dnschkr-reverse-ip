@@ -8,7 +8,7 @@ import { fetchIpIntel } from '@/ip-intel';
 beforeEach(() => fetchMock.mockReset());
 
 describe('fetchIpIntel', () => {
-  it('returns mapped intel on success', async () => {
+  it('returns mapped intel on success and reads is_cdn from classification block', async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -16,7 +16,7 @@ describe('fetchIpIntel', () => {
           asn_org: 'Cloudflare, Inc.',
           country: 'US',
           city: 'San Francisco',
-          is_cdn: true,
+          classification: { is_cdn: true, is_hosting: true },
           threats: [],
         }),
         { status: 200 },
@@ -27,8 +27,29 @@ describe('fetchIpIntel', () => {
       serviceUrl: 'https://ip.dnschkr.com',
       apiKey: 'k',
     });
-    expect(result.asn).toBe('AS13335 Cloudflare, Inc.');
-    expect(result.is_cdn).toBe(true);
+    expect(result?.asn).toBe('AS13335 Cloudflare, Inc.');
+    expect(result?.is_cdn).toBe(true);
+  });
+
+  it('returns is_cdn=false when classification block is missing', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          asn: 'AS15169',
+          asn_org: 'GOOGLE',
+          country: 'US',
+          city: 'Mountain View',
+          threats: [],
+        }),
+        { status: 200 },
+      ),
+    );
+    const result = await fetchIpIntel({
+      ip: '8.8.8.8',
+      serviceUrl: 'https://ip.dnschkr.com',
+      apiKey: 'k',
+    });
+    expect(result?.is_cdn).toBe(false);
   });
 
   it('returns null intel on 5xx', async () => {
