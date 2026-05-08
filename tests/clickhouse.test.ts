@@ -25,8 +25,25 @@ describe('countHostnamesForIp', () => {
     expect(total).toBe(1542);
     expect(mockQuery).toHaveBeenCalledTimes(1);
     const arg = mockQuery.mock.calls[0]![0];
-    expect(arg.query).toMatch(/count\(\*\)/i);
+    expect(arg.query).toMatch(/count\(DISTINCT hostname, record_type\)/i);
     expect(arg.query_params).toEqual({ ip: '1.2.3.4' });
+  });
+});
+
+describe('listHostnamesForIp query shape', () => {
+  it('uses GROUP BY to collapse pre-merge ReplacingMergeTree duplicates', async () => {
+    mockQuery.mockResolvedValueOnce({ json: async () => ({ data: [] }) });
+    const client = createReverseIpClient({
+      url: 'https://example',
+      user: 'tools_ro',
+      password: 'pw',
+    });
+    await client.listHostnamesForIp('1.2.3.4', 100);
+    const arg = mockQuery.mock.calls[0]![0];
+    expect(arg.query).toMatch(/GROUP BY hostname, record_type/);
+    expect(arg.query).toMatch(/min\(first_seen\)/);
+    expect(arg.query).toMatch(/max\(last_seen\)/);
+    expect(arg.query).toMatch(/ORDER BY max\(last_seen\) DESC/);
   });
 });
 

@@ -22,8 +22,15 @@ export interface ReverseIpClient {
 
 // echo-1's ip_to_hostname.ip column is String (not IPv4); bind the param as
 // String to avoid a "no supertype for types String, IPv4" comparison error.
+//
+// ip_to_hostname is ReplacingMergeTree(last_seen) ordered by (ip, hostname,
+// record_type). Async merges leave duplicate (ip, hostname, record_type)
+// rows in pre-merge state — same fingerprint observed on multiple scan days
+// produces a separate physical row each time. Both queries collapse with
+// GROUP BY / count(DISTINCT) instead of FINAL (FINAL on a 1.5B-row MV is
+// prohibitively slow at request time).
 const COUNT_SQL = `
-  SELECT count(*) AS total
+  SELECT count(DISTINCT hostname, record_type) AS total
   FROM ip_to_hostname
   WHERE ip = {ip:String}
     AND last_seen >= now() - INTERVAL 7 DAY
@@ -42,6 +49,10 @@ const COUNT_SQL = `
 // Total query time drops from ~4.5s → ~340ms (~13× faster) and stays flat
 // across IP volumes (verified for 1, 168, 6,001, and 11,508-row IPs).
 //
+// GROUP BY (hostname, record_type) collapses pre-merge ReplacingMergeTree
+// duplicates. min(first_seen) / max(last_seen) give the broadest observation
+// window across the rows being collapsed.
+//
 // IMPORTANT: SELECT aliases use *_iso names rather than reusing the column
 // names (`first_seen`, `last_seen`). ClickHouse's optimizer pushes SELECT
 // alias expressions into WHERE/ORDER BY, so aliasing
@@ -52,14 +63,15 @@ const LIST_SQL = `
   SELECT
     hostname,
     record_type,
-    formatDateTime(first_seen, '%Y-%m-%dT%H:%i:%SZ') AS first_seen_iso,
-    formatDateTime(last_seen, '%Y-%m-%dT%H:%i:%SZ') AS last_seen_iso,
+    formatDateTime(min(first_seen), '%Y-%m-%dT%H:%i:%SZ') AS first_seen_iso,
+    formatDateTime(max(last_seen),  '%Y-%m-%dT%H:%i:%SZ') AS last_seen_iso,
     hostname = cutToFirstSignificantSubdomain(hostname) AS is_apex,
     splitByChar('.', cutToFirstSignificantSubdomain(hostname))[-1] AS tld
   FROM ip_to_hostname
   WHERE ip = {ip:String}
     AND last_seen >= now() - INTERVAL 7 DAY
-  ORDER BY last_seen DESC
+  GROUP BY hostname, record_type
+  ORDER BY max(last_seen) DESC
   LIMIT {limit:UInt32}
 `;
 
