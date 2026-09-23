@@ -22,7 +22,7 @@ const COLUMNS = [
   'hostname',
   'record_type',
   'is_apex',
-  'first_seen',
+
   'last_seen',
   'tld',
 ] as const;
@@ -93,7 +93,7 @@ export async function generateExport(args: {
   try {
     // 1. Query ClickHouse for hostnames.
     const ch = createReverseIpClient(config.clickhouse);
-    const rows = await ch.listHostnamesForIp(ip, ROW_LIMIT);
+    const rows = await ch.listHostnamesForIp(ip, ROW_LIMIT, null);
 
     // 2. Build fingerprinted artifacts.
     const issuedAt = new Date().toISOString();
