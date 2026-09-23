@@ -1,4 +1,5 @@
 export interface IpIntel {
+  /** Bare AS number as a string, e.g. "15169". The UI adds the "AS" prefix. */
   asn: string;
   country: string;
   city: string;
@@ -67,7 +68,7 @@ export async function fetchIpIntel(args: {
     const org = data.network?.organization ?? data.network?.isp ?? '';
 
     return {
-      asn: asn ? `AS${asn}` : '',
+      asn: asn ? String(asn) : '',
       country: data.geo?.country ?? '',
       city: data.geo?.city ?? '',
       org,
