@@ -1,4 +1,4 @@
-FROM node:20-alpine AS builder
+FROM node:22.23.4-alpine AS builder
 WORKDIR /app
 # Pinned, not @latest: pnpm 11 requires Node >= 22.13, so on this node:20 base
 # `corepack prepare pnpm@latest` installs a pnpm that refuses to run and every
@@ -11,7 +11,7 @@ COPY tsconfig.json ./
 COPY src ./src
 RUN pnpm build
 
-FROM node:20-alpine AS runner
+FROM node:22.23.4-alpine AS runner
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@10.32.1 --activate
 ENV NODE_ENV=production
