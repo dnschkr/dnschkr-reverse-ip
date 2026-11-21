@@ -29,9 +29,9 @@ vi.mock('@/clickhouse.js', () => ({
 // ─── AWS S3 mocks ─────────────────────────────────────────────────────────
 const s3SendMock = vi.fn().mockResolvedValue({});
 vi.mock('@aws-sdk/client-s3', () => ({
-  S3Client: vi.fn(() => ({ send: s3SendMock })),
-  PutObjectCommand: vi.fn((args) => ({ __cmd: 'Put', args })),
-  GetObjectCommand: vi.fn((args) => ({ __cmd: 'Get', args })),
+  S3Client: vi.fn(function () { return { send: s3SendMock }; }),
+  PutObjectCommand: vi.fn(function (args) { return { __cmd: 'Put', args }; }),
+  GetObjectCommand: vi.fn(function (args) { return { __cmd: 'Get', args }; }),
 }));
 vi.mock('@aws-sdk/s3-request-presigner', () => ({
   getSignedUrl: vi.fn().mockImplementation(async (_client, cmd) => {
@@ -42,8 +42,8 @@ vi.mock('@aws-sdk/s3-request-presigner', () => ({
 // ─── AWS SES mock ─────────────────────────────────────────────────────────
 const sesSendMock = vi.fn().mockResolvedValue({});
 vi.mock('@aws-sdk/client-sesv2', () => ({
-  SESv2Client: vi.fn(() => ({ send: sesSendMock })),
-  SendEmailCommand: vi.fn((args) => ({ __cmd: 'SendEmail', args })),
+  SESv2Client: vi.fn(function () { return { send: sesSendMock }; }),
+  SendEmailCommand: vi.fn(function (args) { return { __cmd: 'SendEmail', args }; }),
 }));
 
 import { generateExport } from '@/workers/generate-export.js';

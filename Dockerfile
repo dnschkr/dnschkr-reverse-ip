@@ -1,19 +1,19 @@
-FROM node:22.23.5-alpine AS builder
+FROM node:26.13.1-alpine AS builder
 WORKDIR /app
-# Pinned, not @latest: pnpm 11 requires Node >= 22.13, so on this node:20 base
-# `corepack prepare pnpm@latest` installs a pnpm that refuses to run and every
-# build fails on `pnpm install`. Coolify keeps serving the last good image, so
+# Node 25+ images ship without corepack, so pnpm comes from npm. Pinned to the
+# packageManager version, never @latest: an unpinned pnpm drifting ahead of the
+# lockfile fails the install, and Coolify keeps serving the last good image, so
 # the app reports healthy while the deploy silently never lands.
-RUN corepack enable && corepack prepare pnpm@10.32.1 --activate
+RUN npm install -g pnpm@10.32.1
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY tsconfig.json ./
 COPY src ./src
 RUN pnpm build
 
-FROM node:22.23.5-alpine AS runner
+FROM node:26.13.1-alpine AS runner
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@10.32.1 --activate
+RUN npm install -g pnpm@10.32.1
 ENV NODE_ENV=production
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile --prod

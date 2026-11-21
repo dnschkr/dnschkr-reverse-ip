@@ -13,24 +13,24 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1038.0",
-    "@aws-sdk/client-sesv2": "^3.1038.0",
-    "@aws-sdk/s3-request-presigner": "^3.1038.0",
-    "@clickhouse/client": "^1.7.0",
-    "@hono/node-server": "^1.13.0",
-    "@hono/zod-validator": "^0.4.0",
-    "@supabase/supabase-js": "^2.105.0",
-    "hono": "^4.6.0",
-    "p-queue": "^8.0.1",
-    "zod": "^3.23.8"
+    "@aws-sdk/client-s3": "^3.1175.0",
+    "@aws-sdk/client-sesv2": "^3.1175.0",
+    "@aws-sdk/s3-request-presigner": "^3.1175.0",
+    "@clickhouse/client": "^1.25.0",
+    "@hono/node-server": "^1.19.19",
+    "@hono/zod-validator": "^0.9.1",
+    "@supabase/supabase-js": "^2.119.2",
+    "hono": "^4.13.19",
+    "p-queue": "^8.1.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@types/node": "^20.14.0",
-    "tsx": "^4.7.0",
-    "typescript": "^5.5.0",
-    "vitest": "^2.0.0"
+    "@types/node": "^20.19.43",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.12"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=26.13.1"
   }
 }
